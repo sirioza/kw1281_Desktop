@@ -49,6 +49,7 @@
         <Button Grid.Row="1"
                 Grid.Column="0"
                 WidthRequest="80"
+                Padding="0"
                 ImageSource="{StaticResource IconFolder}"
                 Command="{Binding ChooseCommand}"
                 HorizontalOptions="Start" />

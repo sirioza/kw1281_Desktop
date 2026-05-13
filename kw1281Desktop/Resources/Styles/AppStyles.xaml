@@ -108,7 +108,7 @@
            Glyph="{x:Static f:FluentUI.folder_48_regular}"
            FontFamily="{x:Static f:FluentUI.FontFamily}"
            Color="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource LightOnDarkBackground}}"
-           Size="{StaticResource IconSizeSmall}" />
+           Size="{StaticResource IconSizeMiddle}" />
 
     <FontImageSource x:Key="IconAddS"
                      Glyph="{x:Static f:FluentUI.add_square_multiple_20_regular}"
