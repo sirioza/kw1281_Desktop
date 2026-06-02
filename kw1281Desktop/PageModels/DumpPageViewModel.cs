@@ -6,17 +6,14 @@ using System.Windows.Input;
 using kw1281Desktop.PageModels.BasePageViewModels;
 using WindowsAPICodePack.Dialogs;
 using BitFab.KW1281Test.Models;
+using BitFab.KW1281Test.Actions;
 
 namespace kw1281Desktop.PageModels;
 
-public sealed class DumpPageViewModel : BaseScanViewPageModel
+public sealed partial class DumpPageViewModel(Diagnostic diagnostic, ILoaderService loader)
+    : BaseScanViewPageModel(diagnostic, loader)
 {
-    public DumpPageViewModel(Diagnostic diagnostic, ILoaderService loader)
-        : base(diagnostic, loader)
-    {
-    }
-
-    private ElementItem<int> _selectedAddress;
+    private ElementItem<int>? _selectedAddress;
     public ElementItem<int> SelectedAddress
     {
         get => _selectedAddress ?? Addresses.First();
@@ -42,9 +39,9 @@ public sealed class DumpPageViewModel : BaseScanViewPageModel
         new(Commands.MapEeprom, "Map Eeprom")
     ];
 
-    DumpItem _previousSelectedDump;
+    private DumpItem? _previousSelectedDump;
 
-    private DumpItem _selectedDump;
+    private DumpItem? _selectedDump;
     public DumpItem SelectedDump
     {
         get => _selectedDump ?? DumpCommands.First();
@@ -55,14 +52,14 @@ public sealed class DumpPageViewModel : BaseScanViewPageModel
         }
     }
 
-    private string _filePath;
+    private string _filePath = string.Empty;
     public string FilePath
     {
         get => _filePath;
         set => SetProperty(ref _filePath, value);
     }
 
-    private string _start;
+    private string _start = string.Empty;
     public string Start
     {
         get => _start;
@@ -70,7 +67,7 @@ public sealed class DumpPageViewModel : BaseScanViewPageModel
     }
 
 
-    private string _length;
+    private string _length = string.Empty;
     public string Length
     {
         get => _length;
@@ -93,18 +90,25 @@ public sealed class DumpPageViewModel : BaseScanViewPageModel
 
     public ICommand ReadCommand => new Command(async () =>
     {
+        var selectedDump = SelectedDump;
         List<(string, bool)> parameters = [
-             (Start, _selectedDump.Start.Item2),
-            (Length, _selectedDump.Length.Item2),
+             (Start, selectedDump.Start.Item2),
+            (Length, selectedDump.Length.Item2),
             (FilePath, true)];
 
         Arg[] args = [.. parameters.Where(arg => arg.Item2).Select(arg => (Arg)arg.Item1)];
+        using var dataScope = DataSender.Instance.BeginScope();
 
-        DataSender.Instance.DataReceived += OnResultReceived;
+        try
+        {
+            DataSender.Instance.DataReceived += OnResultReceived;
 
-        await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, SelectedDump.Value, args);
-
-        DataSender.Instance.DataReceived -= OnResultReceived;
+            await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, selectedDump.Value, args);
+        }
+        finally
+        {
+            DataSender.Instance.DataReceived -= OnResultReceived;
+        }
     });
 
     public ICommand ResetCommand => new Command(async () =>
@@ -133,18 +137,18 @@ public sealed class DumpPageViewModel : BaseScanViewPageModel
     private void ChangePropertiesState(DumpItem value)
     {
         bool wasSpecial = _previousSelectedDump?.Value == Commands.LoadEeprom;
-        bool nowSpecial = _selectedDump.Value == Commands.LoadEeprom;
+        bool nowSpecial = value.Value == Commands.LoadEeprom;
 
         if (wasSpecial != nowSpecial)
         {
-            FilePath = null!;
+            FilePath = string.Empty;
         }
 
-        _previousSelectedDump = _selectedDump;
+        _previousSelectedDump = value;
 
-        IsLengthFieldEnabled = _selectedDump.Length.Item2;
-        IsStartFieldEnabled = _selectedDump.Start.Item2;
-        Start = value.Start.Item1!;
-        Length = value.Length.Item1!;
+        IsLengthFieldEnabled = value.Length.Item2;
+        IsStartFieldEnabled = value.Start.Item2;
+        Start = value.Start.Item1 ?? string.Empty;
+        Length = value.Length.Item1 ?? string.Empty;
     }
 }

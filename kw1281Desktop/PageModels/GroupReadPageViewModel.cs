@@ -1,4 +1,5 @@
 ﻿using BitFab.KW1281Test;
+using BitFab.KW1281Test.Actions;
 using BitFab.KW1281Test.Enums;
 using BitFab.KW1281Test.Models;
 using kw1281Desktop.Models;
@@ -8,7 +9,7 @@ using System.Collections.ObjectModel;
 namespace kw1281Desktop.PageModels;
 
 [QueryProperty(nameof(Address), "address")]
-public sealed class GroupReadPageViewModel : BaseScanViewPageModel
+public sealed partial class GroupReadPageViewModel : BaseScanViewPageModel
 {
     public GroupReadPageViewModel(Diagnostic diagnostic, ILoaderService loader)
         : base(diagnostic, loader)
@@ -51,6 +52,7 @@ public sealed class GroupReadPageViewModel : BaseScanViewPageModel
         GroupRow row = Rows.First(row => row.Id.Equals(Guid.Parse(args[0].Get<string>())));
 
         TaskCompletionSource<IBaseResult> tcs = new();
+        using var dataScope = DataSender.Instance.BeginScope();
 
         Action<IBaseResult> handler = null!;
 
@@ -62,12 +64,19 @@ public sealed class GroupReadPageViewModel : BaseScanViewPageModel
 
         DataSender.Instance.DataReceived += handler;
 
-        await Diagnostic.RunAsync(
-            AppSettings.Port!,
-            AppSettings.Baud,
-            Address,
-            !IsBasicSetting ? Commands.GroupRead : Commands.BasicSetting,
-            (Arg) row.Input!);
+        try
+        {
+            await Diagnostic.RunAsync(
+                AppSettings.Port!,
+                AppSettings.Baud,
+                Address,
+                !IsBasicSetting ? Commands.GroupRead : Commands.BasicSetting,
+                (Arg) row.Input!);
+        }
+        finally
+        {
+            DataSender.Instance.DataReceived -= handler;
+        }
 
         IBaseResult result = await tcs.Task;
 

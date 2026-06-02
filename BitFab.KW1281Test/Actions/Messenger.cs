@@ -1,39 +1,34 @@
-﻿using BitFab.KW1281Test.Actions.Records;
+using BitFab.KW1281Test.Actions.Records;
 using System.Drawing;
 
 namespace BitFab.KW1281Test.Actions;
 
 public sealed class Messenger
 {
-    private static readonly Messenger _instance = new ();
-    public event Action<TextLine>? MessageReceived;
+    private static readonly Messenger _instance = new();
+    private readonly ScopedEvent<TextLine> _messageReceived = new();
 
-    private Messenger() { }
+    private Messenger()
+    {
+    }
 
     public static Messenger Instance => _instance;
 
-    public void Add(string message)
+    public event Action<TextLine>? MessageReceived
     {
-        Add(message, Color.Black);
+        add => _messageReceived.Add(value);
+        remove => _messageReceived.Remove(value);
     }
 
-    public void Add(string message, Color color)
-    {
-        MessageReceived?.Invoke(new() { Text = message, TextColor = color });
-    }
+    public IDisposable BeginScope() => _messageReceived.BeginScope();
 
-    public void AddLine()
-    {
-        AddLine(string.Empty);
-    }
+    public void Add(string message) => Add(message, Color.Black);
 
-    public void AddLine(string message)
-    {
-        AddLine(message, Color.Black);
-    }
+    public void Add(string message, Color color) => _messageReceived.Invoke(new() { Text = message, TextColor = color });
 
-    public void AddLine(string message, Color color)
-    {
-        Add(message + Environment.NewLine, color);
-    }
+    public void AddLine() =>AddLine(string.Empty);
+
+    public void AddLine(string message) => AddLine(message, Color.Black);
+
+    public void AddLine(string message, Color color) => Add(message + Environment.NewLine, color);
 }

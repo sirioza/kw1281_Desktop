@@ -3,17 +3,14 @@ using BitFab.KW1281Test.Enums;
 using kw1281Desktop.Models;
 using System.Windows.Input;
 using kw1281Desktop.PageModels.BasePageViewModels;
+using BitFab.KW1281Test.Actions;
 
 namespace kw1281Desktop.PageModels;
 
-public sealed class ReadFaultCodesPageViewModel : BaseScanViewPageModel
+public sealed partial class ReadFaultCodesPageViewModel(Diagnostic diagnostic, ILoaderService loader)
+    : BaseScanViewPageModel(diagnostic, loader)
 {
-    public ReadFaultCodesPageViewModel(Diagnostic diagnostic, ILoaderService loader)
-        : base(diagnostic, loader)
-    {
-    }
-
-    private ElementItem<int> _selectedAddress;
+    private ElementItem<int>? _selectedAddress;
     public ElementItem<int> SelectedAddress
     {
         get => _selectedAddress ?? Addresses.First();
@@ -22,11 +19,18 @@ public sealed class ReadFaultCodesPageViewModel : BaseScanViewPageModel
 
     public ICommand ReadClearCommand => new Command(async command =>
     {
-        DataSender.Instance.DataReceived += OnResultReceived;
+        using var dataScope = DataSender.Instance.BeginScope();
 
-        await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, Enum.Parse<Commands>(command.ToString()!));
+        try
+        {
+            DataSender.Instance.DataReceived += OnResultReceived;
 
-        DataSender.Instance.DataReceived -= OnResultReceived;
+            await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, Enum.Parse<Commands>(command.ToString()!));
+        }
+        finally
+        {
+            DataSender.Instance.DataReceived -= OnResultReceived;
+        }
     });
 
     public ICommand GoToGroupCommand => new Command(async () =>

@@ -7,6 +7,7 @@ using System.Windows.Input;
 using kw1281Desktop.Extensions;
 using kw1281Desktop.PageModels.BasePageViewModels;
 using BitFab.KW1281Test.Models;
+using BitFab.KW1281Test.Actions;
 
 namespace kw1281Desktop.PageModels;
 
@@ -28,7 +29,7 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
         set => SetProperty(ref _selectedCommand, value);
     }
 
-    private ElementItem<int> _selectedAddress;
+    private ElementItem<int>? _selectedAddress;
     public ElementItem<int> SelectedAddress
     {
         get => _selectedAddress ?? Addresses.First();
@@ -37,7 +38,7 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
 
     public CustomTuple CodeWorkshop{ get; } = new();
 
-    private string _login;
+    private string _login = string.Empty;
     public string Login
     {
         get => _login;
@@ -69,11 +70,18 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
                 return;
         }
 
-        DataSender.Instance.DataReceived += OnResultReceived;
+        using var dataScope = DataSender.Instance.BeginScope();
 
-        await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, SelectedCommand, args:args);
+        try
+        {
+            DataSender.Instance.DataReceived += OnResultReceived;
 
-        DataSender.Instance.DataReceived -= OnResultReceived;
+            await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, SelectedCommand, args:args);
+        }
+        finally
+        {
+            DataSender.Instance.DataReceived -= OnResultReceived;
+        }
     });
 
     public async Task RunActuatorLoopAsync()
@@ -83,12 +91,18 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
         _popup.CancelClicked += Diagnostic.Control.RequestStop;
 
         var popupTask = Shell.Current.ShowPopupAsync(_popup);
+        using var dataScope = DataSender.Instance.BeginScope();
 
-        DataSender.Instance.DataReceived += OnPopupResultReceived;
+        try
+        {
+            DataSender.Instance.DataReceived += OnPopupResultReceived;
 
-        await ExecuteReadInBackground(SelectedAddress.Value, SelectedCommand);
-
-        DataSender.Instance.DataReceived -= OnPopupResultReceived;
+            await ExecuteReadInBackground(SelectedAddress.Value, SelectedCommand);
+        }
+        finally
+        {
+            DataSender.Instance.DataReceived -= OnPopupResultReceived;
+        }
 
         await popupTask;
 

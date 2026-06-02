@@ -52,6 +52,7 @@ public abstract class BaseScanViewPageModel : BasePropertyChanged
 
             if (AppSettings.Logging)
             {
+                using var messageScope = Messenger.Instance.BeginScope();
                 try
                 {
                     Messenger.Instance.MessageReceived += OnLogReceived;

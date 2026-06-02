@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace kw1281Desktop.PageModels;
 
-public sealed class AppSettingsPageViewModel : BasePropertyChanged
+public sealed partial class AppSettingsPageViewModel : BasePropertyChanged
 {
     public ObservableCollection<int> Bauds { get; } = [4800, AppSettings.BaudDefault, 10400];
     public ObservableCollection<string> Ports { get; } = [AppSettings.PortDefault, "COM2", "COM3", "COM4"];
@@ -55,7 +55,7 @@ public sealed class AppSettingsPageViewModel : BasePropertyChanged
         Dictionary<string, object>? loaded = AppSettingsStorage.Load();
 
         SelectedPort = loaded?["port"] != null ? loaded["port"].ToString() : AppSettings.PortDefault;
-        IsLoggingEnabled = loaded?["logging"] != null ? ((JsonElement)loaded["logging"]).GetBoolean() : true;
+        IsLoggingEnabled = loaded?["logging"] == null || ((JsonElement)loaded["logging"]).GetBoolean();
         SelectedBaud = loaded?.TryGetValue("baud", out object? value) != null && value != null
             ? ((JsonElement)value).GetInt32()
             : AppSettings.BaudDefault;

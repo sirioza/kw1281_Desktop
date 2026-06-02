@@ -4,16 +4,13 @@ using kw1281Desktop.Models;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using kw1281Desktop.PageModels.BasePageViewModels;
+using BitFab.KW1281Test.Actions;
 
 namespace kw1281Desktop.PageModels;
 
-public sealed class AdaptationPageViewModel : BaseScanViewPageModel
+public sealed partial class AdaptationPageViewModel(Diagnostic diagnostic, ILoaderService loader)
+    : BaseScanViewPageModel(diagnostic, loader)
 {
-    public AdaptationPageViewModel(Diagnostic diagnostic, ILoaderService loader)
-        : base(diagnostic, loader)
-    {
-    }
-
     public ObservableCollection<ElementItem<Commands>> CommandList { get; } =
     [
         new( Commands.AdaptationRead, "Read" ),
@@ -21,7 +18,7 @@ public sealed class AdaptationPageViewModel : BaseScanViewPageModel
         new( Commands.AdaptationSave, "Save" )
     ];
 
-    private ElementItem<Commands> _selectedCommand;
+    private ElementItem<Commands>? _selectedCommand;
     public ElementItem<Commands> SelectedCommand
     {
         get => _selectedCommand ?? CommandList.First();
@@ -29,7 +26,7 @@ public sealed class AdaptationPageViewModel : BaseScanViewPageModel
         {
             SetProperty(ref _selectedCommand, value);
 
-            if (_selectedCommand.Value.Equals(Commands.AdaptationRead))
+            if (value.Value.Equals(Commands.AdaptationRead))
             {
                 IsFieldEnabled = false;
             }
@@ -40,28 +37,28 @@ public sealed class AdaptationPageViewModel : BaseScanViewPageModel
         }
     }
 
-    private ElementItem<int> _selectedAddress;
+    private ElementItem<int>? _selectedAddress;
     public ElementItem<int> SelectedAddress
     {
         get => _selectedAddress ?? Addresses.First();
         set => SetProperty(ref _selectedAddress, value);
     }
 
-    private string _сhannel;
+    private string _сhannel = string.Empty;
     public string Channel
     {
         get => _сhannel;
         set => SetProperty(ref _сhannel, value);
     }
 
-    private string _value;
+    private string _value = string.Empty;
     public string Value
     {
         get => _value;
         set => SetProperty(ref _value, value);
     }
 
-    private string _login;
+    private string _login = string.Empty;
     public string Login
     {
         get => _login;
@@ -78,14 +75,20 @@ public sealed class AdaptationPageViewModel : BaseScanViewPageModel
     public ICommand RunCommand => new Command(async () =>
     {
         var command = SelectedCommand.Value;
+        using var dataScope = DataSender.Instance.BeginScope();
 
-        DataSender.Instance.DataReceived += OnResultReceived;
+        try
+        {
+            DataSender.Instance.DataReceived += OnResultReceived;
 
-        await ExecuteReadInBackgroundWithLoader(
-            SelectedAddress.Value,
-            command,
-            args: command.Equals(Commands.AdaptationRead) ? [Channel, Login] : [Channel, Value, Login]);
-
-        DataSender.Instance.DataReceived -= OnResultReceived;
+            await ExecuteReadInBackgroundWithLoader(
+                SelectedAddress.Value,
+                command,
+                args: command.Equals(Commands.AdaptationRead) ? [Channel, Login] : [Channel, Value, Login]);
+        }
+        finally
+        {
+            DataSender.Instance.DataReceived -= OnResultReceived;
+        }
     });
 }

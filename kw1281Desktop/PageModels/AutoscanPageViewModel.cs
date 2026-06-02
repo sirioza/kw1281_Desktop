@@ -3,25 +3,29 @@ using BitFab.KW1281Test.Enums;
 using System.Windows.Input;
 using kw1281Desktop.PageModels.BasePageViewModels;
 using BitFab.KW1281Test.Models;
+using BitFab.KW1281Test.Actions;
 
 namespace kw1281Desktop.PageModels;
 
-public sealed class AutoscanPageViewModel : BaseScanViewPageModel
+public sealed partial class AutoscanPageViewModel(Diagnostic diagnostic, ILoaderService loader)
+    : BaseScanViewPageModel(diagnostic, loader)
 {
-    public AutoscanPageViewModel(Diagnostic diagnostic, ILoaderService loader)
-        : base(diagnostic, loader)
-    {
-    }
-
     public ICommand ReadCommand => new Command(async () =>
     {
-        DataSender.Instance.DataReceived += OnResultReceived;
+        using var dataScope = DataSender.Instance.BeginScope();
 
-        await ExecuteReadInBackgroundWithLoader(
-            0,
-            Commands.AutoScan,
-            args: [.. Addresses.Select(address => (Arg)address.Value)]);
+        try
+        {
+            DataSender.Instance.DataReceived += OnResultReceived;
 
-        DataSender.Instance.DataReceived -= OnResultReceived;
+            await ExecuteReadInBackgroundWithLoader(
+                0,
+                Commands.AutoScan,
+                args: [.. Addresses.Select(address => (Arg)address.Value)]);
+        }
+        finally
+        {
+            DataSender.Instance.DataReceived -= OnResultReceived;
+        }
     });
 }

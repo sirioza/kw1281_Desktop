@@ -1,7 +1,9 @@
-﻿public sealed class DataSender
+namespace BitFab.KW1281Test.Actions;
+
+public sealed class DataSender
 {
-    private static readonly DataSender _instance = new ();
-    public event Action<IBaseResult>? DataReceived;
+    private static readonly DataSender _instance = new();
+    private readonly ScopedEvent<IBaseResult> _dataReceived = new();
 
     private DataSender()
     {
@@ -9,25 +11,21 @@
 
     public static DataSender Instance => _instance;
 
-    public void Send<T>(T data)
+    public event Action<IBaseResult>? DataReceived
     {
-        Send(data, null!);
+        add => _dataReceived.Add(value);
+        remove => _dataReceived.Remove(value);
     }
 
-    public void Error(Exception error)
-    {
-        Send<Exception>(default!, error);
-    }
+    public IDisposable BeginScope() => _dataReceived.BeginScope();
 
-    public void Error(string error)
-    {
-        Error(new Exception(error));
-    }
+    public void Send<T>(T data) => Send(data, null!);
 
-    public void Send<T>(T data, Exception error)
-    {
-        DataReceived?.Invoke(new Result<T> (data, error));
-    }
+    public void Error(Exception error) => Send<Exception>(default!, error);
+
+    public void Error(string error) => Error(new Exception(error));
+
+    public void Send<T>(T data, Exception error) => _dataReceived.Invoke(new Result<T>(data, error));
 }
 
 public record Result<T>(T Data, Exception Error) : IBaseResult
