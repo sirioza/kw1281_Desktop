@@ -103,7 +103,7 @@ public sealed partial class DumpPageViewModel(Diagnostic diagnostic, ILoaderServ
         {
             DataSender.Instance.DataReceived += OnResultReceived;
 
-            await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, selectedDump.Value, args);
+            await base.ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, selectedDump.Value, args);
         }
         finally
         {
@@ -113,7 +113,7 @@ public sealed partial class DumpPageViewModel(Diagnostic diagnostic, ILoaderServ
 
     public ICommand ResetCommand => new Command(async () =>
     {
-        await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, Commands.Reset);
+        await base.ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, Commands.Reset);
     });
 
     public ICommand ChooseCommand => new Command(() =>

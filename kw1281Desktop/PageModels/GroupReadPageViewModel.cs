@@ -40,18 +40,18 @@ public sealed partial class GroupReadPageViewModel : BaseScanViewPageModel
             return;
         }
 
-        await ExecuteReadInBackgroundWithLoader(
+        await base.ExecuteReadInBackgroundWithLoader(
             Address,
             !IsBasicSetting ? Commands.GroupRead : Commands.BasicSetting,
             row.Id.ToString());
     }
 
-    protected override async Task ExecuteReadInBackground(int controllerAddress, Commands command,
-        params Arg[] args)
+    protected override async Task ExecuteReadInBackground(int controllerAddress, Commands command, params Arg[] args)
     {
         GroupRow row = Rows.First(row => row.Id.Equals(Guid.Parse(args[0].Get<string>())));
+        var groupInput = row.Input!;
 
-        TaskCompletionSource<IBaseResult> tcs = new();
+        TaskCompletionSource<IBaseResult> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         using var dataScope = DataSender.Instance.BeginScope();
 
         Action<IBaseResult> handler = null!;
@@ -66,12 +66,14 @@ public sealed partial class GroupReadPageViewModel : BaseScanViewPageModel
 
         try
         {
-            await Diagnostic.RunAsync(
+            await Task.Run(() => Diagnostic.RunAsync(
                 AppSettings.Port!,
                 AppSettings.Baud,
-                Address,
-                !IsBasicSetting ? Commands.GroupRead : Commands.BasicSetting,
-                (Arg) row.Input!);
+                controllerAddress,
+                command,
+                (Arg)groupInput));
+
+            tcs.TrySetResult(new Result<Exception>(default!, new Exception("No data received.")));
         }
         finally
         {

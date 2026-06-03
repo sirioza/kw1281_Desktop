@@ -25,7 +25,7 @@ public sealed partial class ReadFaultCodesPageViewModel(Diagnostic diagnostic, I
         {
             DataSender.Instance.DataReceived += OnResultReceived;
 
-            await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, Enum.Parse<Commands>(command.ToString()!));
+            await base.ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, Enum.Parse<Commands>(command.ToString()!));
         }
         finally
         {

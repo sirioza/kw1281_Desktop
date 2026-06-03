@@ -12,8 +12,8 @@ namespace BitFab.KW1281Test;
 
 public class Diagnostic
 {
-    Messenger Mc = Messenger.Instance;
-    DataSender Ds = DataSender.Instance;
+    private readonly Messenger Mc = Messenger.Instance;
+    private readonly DataSender Ds = DataSender.Instance;
 
     public static ActuatorTestControl Control { get; } = new();
     internal static List<string> CommandAndArgs { get; private set; } = [];

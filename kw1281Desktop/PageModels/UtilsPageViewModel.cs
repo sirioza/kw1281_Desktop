@@ -76,7 +76,7 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
         {
             DataSender.Instance.DataReceived += OnResultReceived;
 
-            await ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, SelectedCommand, args:args);
+            await base.ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, SelectedCommand, args:args);
         }
         finally
         {
@@ -97,7 +97,7 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
         {
             DataSender.Instance.DataReceived += OnPopupResultReceived;
 
-            await ExecuteReadInBackground(SelectedAddress.Value, SelectedCommand);
+            await base.ExecuteReadInBackground(SelectedAddress.Value, SelectedCommand);
         }
         finally
         {
