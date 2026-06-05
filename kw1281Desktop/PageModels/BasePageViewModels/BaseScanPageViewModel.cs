@@ -45,10 +45,16 @@ public abstract class BaseScanViewPageModel : BasePropertyChanged
 
     protected virtual async Task ExecuteReadInBackground(int controllerAddress, Commands command, params Arg[] args)
     {
+        await ExecuteReadInBackground(controllerAddress, command, null, args);
+    }
+
+    protected async Task ExecuteReadInBackground(int controllerAddress, Commands command, ActuatorTestControl? actuatorControl,
+        params Arg[] args)
+    {
         await Task.Run(async () =>
         {
             async Task RunAsync() => await Diagnostic
-                .RunAsync(AppSettings.Port!, AppSettings.Baud, controllerAddress, command, args);
+                .RunAsync(AppSettings.Port!, AppSettings.Baud, controllerAddress, command, actuatorControl, args);
 
             if (AppSettings.Logging)
             {

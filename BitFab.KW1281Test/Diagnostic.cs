@@ -15,11 +15,15 @@ public class Diagnostic
     private readonly Messenger Mc = Messenger.Instance;
     private readonly DataSender Ds = DataSender.Instance;
 
-    public static ActuatorTestControl Control { get; } = new();
     internal static List<string> CommandAndArgs { get; private set; } = [];
 
+    public async Task RunAsync(string portName, int baudRate, int controllerAddress, Commands command, params Arg[] args)
+    {
+        await RunAsync(portName, baudRate, controllerAddress, command, null, args);
+    }
+
     public async Task RunAsync(string portName, int baudRate, int controllerAddress, Commands command,
-        params Arg[] args)
+        ActuatorTestControl? actuatorControl, params Arg[] args)
     {
         try
         {
@@ -167,7 +171,13 @@ public class Diagnostic
             switch (command)
             {
                 case Commands.ActuatorTest:
-                    await tester.ActuatorTestAsync(Control);
+                    if (actuatorControl == null)
+                    {
+                        Ds.Error("Actuator test control is not initialized.");
+                        break;
+                    }
+
+                    await tester.ActuatorTestAsync(actuatorControl);
                     break;
                 case Commands.AdaptationRead:
                     tester.AdaptationRead(channel, login, ecuInfo.WorkshopCode);

@@ -1,26 +1,53 @@
-﻿namespace BitFab.KW1281Test.Models
+using System.Threading.Channels;
+
+namespace BitFab.KW1281Test.Models;
+
+public sealed class ActuatorTestControl
 {
-    public class ActuatorTestControl
+    private readonly Channel<bool> _steps = Channel.CreateBounded<bool>(
+        new BoundedChannelOptions(1)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest,
+            SingleReader = true,
+            SingleWriter = false
+        });
+
+    private readonly CancellationTokenSource _stop = new();
+
+    public bool StopRequested => _stop.IsCancellationRequested;
+
+    public void RequestNext()
     {
-        private TaskCompletionSource<bool>? _tcs;
-
-        public bool StopRequested { get; private set; }
-
-        public void RequestNext()
+        if (!StopRequested)
         {
-            _tcs?.TrySetResult(true);
+            _steps.Writer.TryWrite(true);
+        }
+    }
+
+    public void RequestStop()
+    {
+        if (!_stop.IsCancellationRequested)
+        {
+            _stop.Cancel();
         }
 
-        public void RequestStop()
+        _steps.Writer.TryWrite(false);
+    }
+
+    public async Task<bool> WaitForNextStepAsync()
+    {
+        if (StopRequested)
         {
-            StopRequested = true;
-            _tcs?.TrySetResult(false);
+            return false;
         }
 
-        public Task<bool> WaitForNextStepAsync()
+        try
         {
-            _tcs = new TaskCompletionSource<bool>();
-            return _tcs.Task;
+            return await _steps.Reader.ReadAsync(_stop.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
         }
     }
 }

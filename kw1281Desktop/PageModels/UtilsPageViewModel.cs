@@ -76,7 +76,7 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
         {
             DataSender.Instance.DataReceived += OnResultReceived;
 
-            await base.ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, SelectedCommand, args:args);
+            await base.ExecuteReadInBackgroundWithLoader(SelectedAddress.Value, SelectedCommand, args);
         }
         finally
         {
@@ -86,28 +86,35 @@ public sealed class UtilsPageViewModel : BaseScanViewPageModel
 
     public async Task RunActuatorLoopAsync()
     {
-        _popup.Input = "Test is started...";
-        _popup.NextClicked += Diagnostic.Control.RequestNext;
-        _popup.CancelClicked += Diagnostic.Control.RequestStop;
+        var control = new ActuatorTestControl();
 
-        var popupTask = Shell.Current.ShowPopupAsync(_popup);
-        using var dataScope = DataSender.Instance.BeginScope();
+        _popup.Input = "Test is started...";
+        _popup.NextClicked += control.RequestNext;
+        _popup.CancelClicked += control.RequestStop;
 
         try
         {
-            DataSender.Instance.DataReceived += OnPopupResultReceived;
+            var popupTask = Shell.Current.ShowPopupAsync(_popup);
+            using var dataScope = DataSender.Instance.BeginScope();
 
-            await base.ExecuteReadInBackground(SelectedAddress.Value, SelectedCommand);
+            try
+            {
+                DataSender.Instance.DataReceived += OnPopupResultReceived;
+
+                await base.ExecuteReadInBackground(SelectedAddress.Value, SelectedCommand, control);
+            }
+            finally
+            {
+                DataSender.Instance.DataReceived -= OnPopupResultReceived;
+            }
+
+            await popupTask;
         }
         finally
         {
-            DataSender.Instance.DataReceived -= OnPopupResultReceived;
+            _popup.NextClicked -= control.RequestNext;
+            _popup.CancelClicked -= control.RequestStop;
         }
-
-        await popupTask;
-
-        _popup.NextClicked -= Diagnostic.Control.RequestNext;
-        _popup.CancelClicked -= Diagnostic.Control.RequestStop;
     }
 
     private void OnPopupResultReceived(IBaseResult baseResult)
