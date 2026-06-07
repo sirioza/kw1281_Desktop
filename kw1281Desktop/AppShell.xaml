@@ -7,6 +7,26 @@
     xmlns:pages="clr-namespace:kw1281Desktop.Pages"
     Shell.FlyoutBehavior="Flyout">
 
+    <Shell.ItemTemplate>
+        <DataTemplate>
+            <Grid
+                ColumnDefinitions="64,*"
+                HeightRequest="56">
+                <Image
+                    Source="{Binding FlyoutIcon}"
+                    WidthRequest="{StaticResource IconSize}"
+                    HeightRequest="{StaticResource IconSize}"
+                    Scale="1"
+                    HorizontalOptions="Center"
+                    VerticalOptions="Center" />
+                <Label
+                    Grid.Column="1"
+                    Text="{Binding Title}"
+                    VerticalOptions="Center" />
+            </Grid>
+        </DataTemplate>
+    </Shell.ItemTemplate>
+
     <ShellContent
         Title="App settings"
         Icon="{StaticResource IconAppSettings}"
