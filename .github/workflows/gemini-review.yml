@@ -2,26 +2,22 @@ name: Gemini Code Reviewer
 
 on:
   pull_request:
-    types: [opened, synchronize] # Запуск при открытии PR или добавлении новых коммитов
+    types: [opened, synchronize]
 
 jobs:
   review:
     runs-on: ubuntu-latest
     permissions:
-      pull-requests: write # Разрешаем боту писать комментарии в PR
-      contents: read       # Разрешаем читать файлы проекта
+      pull-requests: write
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Официальный легковесный экшен для ревью через Gemini
-      - name: Gemini PR Reviewer
-        uses: google-gemini/gemini-review-action@v1
+      - name: Gemini CLI Code Review
+        uses: google-github-actions/run-gemini-cli@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
-          # Вы вы можете выбрать модель. flash — самая быстрая и бесплатная
-          model: 'gemini-2.5-flash' 
-          # Задаем язык комментариев бота
-          language: 'ru' 
+          command: '/review'
