@@ -5,5 +5,3 @@ public interface ILoaderService
     void ShowAsync();
     Task HideAsync();
 }
-
-
