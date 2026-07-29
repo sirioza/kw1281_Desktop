@@ -16,8 +16,9 @@ jobs:
 
       - name: Gemini CLI Code Review
         uses: google-github-actions/run-gemini-cli@main
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: true
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           github_pr_number: ${{ github.event.pull_request.number }}
-          
           prompt: "Perform a detailed code review for this pull request. Identify any bugs, performance bottlenecks, or architectural issues. Write all your findings and comments strictly in Russian."
