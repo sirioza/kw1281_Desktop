@@ -11,11 +11,16 @@ jobs:
       pull-requests: write
       contents: read
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Gemini CLI Code Review
         uses: google-github-actions/run-gemini-cli@main
         env:
           GEMINI_CLI_TRUST_WORKSPACE: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          gemini_model: 'gemini-1.5-flash'
-          prompt: "Perform a detailed code review for this pull request. Identify any bugs, performance bottlenecks, or architectural issues. Write all your findings and comments strictly in Russian."
+          github_pr_number: ${{ github.event.pull_request.number }}
+          command: '/review'
+          prompt: "Perform a detailed code review for this pull request. Write all comments strictly in English."
