@@ -6,9 +6,9 @@ using System.Text.RegularExpressions;
 
 namespace BitFab.KW1281Test.Cluster
 {
-    internal class VdoCluster : ICluster
+    internal class VdoCluster(IKW1281Dialog kwp1281) : ICluster
     {
-        Messenger Mc = Messenger.Instance;
+        private readonly Messenger Mc = Messenger.Instance;
 
         public void UnlockForEepromReadWrite()
         {
@@ -93,13 +93,13 @@ namespace BitFab.KW1281Test.Cluster
                 (byte)((address >> 8) & 0xFF),
                 (byte)((address >> 16) & 0xFF),
             ]);
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 // Permissions issue?
                 return [];
             }
-            return blocks[0].Body.ToList();
+            return [.. blocks[0].Body];
         }
 
         /// <summary>
@@ -120,12 +120,12 @@ namespace BitFab.KW1281Test.Cluster
                 (byte)(address & 0xFF),
                 (byte)((address >> 8) & 0xFF),
             ]);
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 throw new InvalidOperationException($"Custom \"Read NEC ROM\" returned {blocks.Count} blocks instead of 1");
             }
-            return blocks[0].Body.ToList();
+            return [.. blocks[0].Body];
         }
 
         public List<byte> MapEeprom()
@@ -138,7 +138,7 @@ namespace BitFab.KW1281Test.Cluster
             for (ushort addr = 0; addr < 2048; addr += blockSize)
             {
                 var blockBytes = _kwp1281.ReadEeprom(addr, blockSize);
-                blockBytes = Enumerable.Repeat(blockBytes == null ? (byte)0 : (byte)0xFF, blockSize).ToList();
+                blockBytes = [.. Enumerable.Repeat(blockBytes == null ? (byte)0 : (byte)0xFF, blockSize)];
                 map.AddRange(blockBytes);
             }
 
@@ -162,7 +162,7 @@ namespace BitFab.KW1281Test.Cluster
                         blockBytes.AddRange(Enumerable.Repeat((byte)0, readLength - blockBytes.Count));
                         Mc.AddLine($"{readLength - blockBytes.Count} missing");
                     }
-                    fs.Write(blockBytes.ToArray(), 0, blockBytes.Count);
+                    fs.Write([.. blockBytes], 0, blockBytes.Count);
                     fs.Flush();
                 }
             }
@@ -248,13 +248,11 @@ namespace BitFab.KW1281Test.Cluster
             {
                 Mc.AddLine($"Block: {Utils.Dump(customBlock.Body)}");
 
-                var keyBytes = VdoKeyFinder.FindKey(
-                    customBlock.Body.ToArray(), MaxAccessLevel);
+                var keyBytes = VdoKeyFinder.FindKey([.. customBlock.Body], MaxAccessLevel);
 
                 Mc.AddLine("Sending Custom \"Key response\" block");
 
-                var keyResponse = new List<byte> { 0x96, 0x02 };
-                keyResponse.AddRange(keyBytes);
+                List<byte> keyResponse = [0x96, 0x02, .. keyBytes];
 
                 _ = SendCustom(keyResponse);
             }
@@ -270,7 +268,7 @@ namespace BitFab.KW1281Test.Cluster
         {
             Mc.AddLine("Sending Custom \"Get Access Level\" block");
             var response = SendCustom([0x96, 0x04]);
-            var responseBlocks = response.Where(b => !b.IsAckNak).ToList();
+            List<Block> responseBlocks = [.. response.Where(b => !b.IsAckNak)];
             if (responseBlocks is [CustomBlock])
             {
                 int accessLevel = responseBlocks[0].Body.First();
@@ -348,127 +346,59 @@ namespace BitFab.KW1281Test.Cluster
         /// </summary>
         internal static byte[][] GetClusterUnlockCodes(string softwareVersion)
         {
-            switch(softwareVersion)
+            return softwareVersion switch
             {
-                case "VT5P07MH 09.00": // 7H5920872L VDO V03
-                    return [[0x00, 0x07, 0x43, 0x35]];
-
-                case "VAT500LL 01.00":
-                case "VAT500LL 01.20": // 1J0920905L V01
-                case "VAT500MH 01.10": // 1J0920925D V06
-                case "VAT500MH 01.20": // 1J5920925C V09
-                    return [[0x01, 0x04, 0x3D, 0x35]];
-
-                case "$01 $00 $14 $01": // 1J0919860B V15
-                    return [[0x01, 0x08, 0x05, 0x02]];
-
-                case "V798MLA 01.00": // 7D0920800F V01, 1J0919951C V55
-                    return [[0x02, 0x03, 0x05, 0x09]];
-
-                case "$00 $00 $13 $01": // 8D0919880M D02
-                    return [[0x09, 0x06, 0x05, 0x02]];
-
-                case "VSQX01LM 01.00": // 6Q0920800 V11
-                    return [[0x31, 0x39, 0x34, 0x46]];
-
-                case "VCLM09MH $00 $09": // 3BD920848E V03
-                    return [[0x32, 0x31, 0x36, 0x31]];
-
-                case "VCB07LL  09.00": // 1JD920826E V01
-                    return [[0x33, 0x34, 0x46, 0x4A]];
-
-                case "VKQ501HH 09.00":
-                case "VQMJ07HH 08.40": // 6Y0920843L V04
-                case "VQMJ07LM 08.40": // 6Q0920923Q V02
-                case "VQMJ07LM 09.00": // 6Q0920804Q V06
-                    return [[0x34, 0x3F, 0x43, 0x39]];
-
-                case "VQMJ06LM 09.00": // 6Q0920903 V02
-                    return [[0x35, 0x3D, 0x47, 0x3E]];
-
-                case "SS5501LM 00.80":
-                case "SS5501ML 00.80":
-                    return [[0x36, 0x3B, 0x36, 0x3D]];
-
-                case "VWK501LL 00.88": // 1J0920906L V58
-                case "VWK501MH 00.88":
-                case "VWK501LL 01.00":
-                case "VWK501MH 01.00":
-                    return [[0x36, 0x3D, 0x3E, 0x47]];
-
-                case "VT5X02LL 09.40":
-                    return [[0x36, 0x3F, 0x45, 0x42]];
-
-                case "VQMJ09HH 05.10": // 6QE920827C V06
-                    return [[0x37, 0x42, 0x47, 0x43]];
-
-                case "VT5X02LL 09.00":
-                    return [[0x38, 0x39, 0x3A, 0x47]];
-
-                case "S599CAA  01.00": // 1M0920800C V15
-                case "V599HLA  00.91": // 7D0920841A V18
-                case "V599LLA  00.91": // 7D0920801B V18
-                case "V599LLA  01.00": // 1J0920800L V59
-                case "V599MLA  01.00": // 7D0920821D V22
-                case "V599LLA  03.00": // 1J0920900J V60
-                    return [[0x38, 0x3F, 0x40, 0x35]];
-
-                case "MPV300LL 04.00":
-                case "MPV501MH 01.00": // 7M3920820H V57
-                    return [[0x38, 0x47, 0x34, 0x3A]];
-
-                case "VWK501MH 00.92": // 3B0920827C V06
-                case "VWK501MH 01.10":
-                    return [[0x39, 0x34, 0x34, 0x40]];
-
-                case "VBK700LL 00.96":
-                case "VBK700LL 01.00":
-                case "VBKX00MH 01.00":
-                    return [[0x3A, 0x39, 0x31, 0x43]];
-
-                case "MPV300LL 02.00":
-                    return [[0x3B, 0x47, 0x03, 0x02]];
-
-                case "SS5501LM 01.00": // 1M0920802D V05
-                case "SS5501ML 01.00":
-                    return [[0x3C, 0x34, 0x47, 0x35]];
-
-                case "VSQX01LM 01.20":
-                    return [[0x3D, 0x36, 0x40, 0x36]];
-
-                case "S599CAA  00.80":
-                    return [[0x3D, 0x39, 0x3B, 0x35]];
-
-                case "KB5M07HH 09.00": // 3U0920842B V06
-                case "VWK503LL 09.00":
-                case "VWK503MH 09.00": // 1J0920927 V02
-                    return [[0x3E, 0x35, 0x3D, 0x3A]];
-
-                case "VMMJ08MH 09.00": // 1J5920826L V75
-                    return [[0x3E, 0x47, 0x3D, 0x48]];
-
-                case "MPV300LL 00.90":
-                case "MPV500LL 00.90":
-                    return [[0x3F, 0x38, 0x43, 0x38]];
-
-                case "SS5500LM 01.00":
-                    return [[0x40, 0x39, 0x39, 0x38]];
-
-                case "VSQX01LM 01.10": // 6Q0920900 V18
-                    return [[0x43, 0x43, 0x3D, 0x37]];
-
-                case "MPV300LL 03.00":
-                    return [[0x43, 0x43, 0x43, 0x39]];
-
-                case "KPQMLA` $01": // 6Y1920860G V12
-                    return [[0x47, 0x3B, 0x31, 0x3F]];
-
-                case "K5MJ07LM 08.10": // 5J0920810C V2721446
-                    return [[0x47, 0x3F, 0x39, 0x44]];
-
-                default:
-                    return ClusterUnlockCodes;
-            }
+                // 7H5920872L VDO V03
+                "VT5P07MH 09.00" => [[0x00, 0x07, 0x43, 0x35]],
+                "VAT500LL 01.00" or "VAT500LL 01.20" or "VAT500MH 01.10" or "VAT500MH 01.20" => [[0x01, 0x04, 0x3D, 0x35]],
+                // 1J0919860B V15
+                "$01 $00 $14 $01" => [[0x01, 0x08, 0x05, 0x02]],
+                // 7D0920800F V01, 1J0919951C V55
+                "V798MLA 01.00" => [[0x02, 0x03, 0x05, 0x09]],
+                // 8D0919880M D02
+                "$00 $00 $13 $01" => [[0x09, 0x06, 0x05, 0x02]],
+                // 6Q0920800 V11
+                "VSQX01LM 01.00" => [[0x31, 0x39, 0x34, 0x46]],
+                // 3BD920848E V03
+                "VCLM09MH $00 $09" => [[0x32, 0x31, 0x36, 0x31]],
+                // 1JD920826E V01
+                "VCB07LL  09.00" => [[0x33, 0x34, 0x46, 0x4A]],
+                "VKQ501HH 09.00" or "VQMJ07HH 08.40" or "VQMJ07LM 08.40" or "VQMJ07LM 09.00" => [[0x34, 0x3F, 0x43, 0x39]],
+                // 6Q0920903 V02
+                "VQMJ06LM 09.00" => [[0x35, 0x3D, 0x47, 0x3E]],
+                "SS5501LM 00.80" or "SS5501ML 00.80" => [[0x36, 0x3B, 0x36, 0x3D]],
+                // 1J0920906L V58
+                "VWK501LL 00.88" or "VWK501MH 00.88" or "VWK501LL 01.00" or "VWK501MH 01.00" => [[0x36, 0x3D, 0x3E, 0x47]],
+                "VT5X02LL 09.40" => [[0x36, 0x3F, 0x45, 0x42]],
+                // 6QE920827C V06
+                "VQMJ09HH 05.10" => [[0x37, 0x42, 0x47, 0x43]],
+                "VT5X02LL 09.00" => [[0x38, 0x39, 0x3A, 0x47]],
+                // 1M0920800C V15
+                "S599CAA  01.00" or "V599HLA  00.91" or "V599LLA  00.91" or "V599LLA  01.00" or "V599MLA  01.00" or "V599LLA  03.00" => [[0x38, 0x3F, 0x40, 0x35]],
+                "MPV300LL 04.00" or "MPV501MH 01.00" => [[0x38, 0x47, 0x34, 0x3A]],
+                // 3B0920827C V06
+                "VWK501MH 00.92" or "VWK501MH 01.10" => [[0x39, 0x34, 0x34, 0x40]],
+                "VBK700LL 00.96" or "VBK700LL 01.00" or "VBKX00MH 01.00" => [[0x3A, 0x39, 0x31, 0x43]],
+                "MPV300LL 02.00" => [[0x3B, 0x47, 0x03, 0x02]],
+                // 1M0920802D V05
+                "SS5501LM 01.00" or "SS5501ML 01.00" => [[0x3C, 0x34, 0x47, 0x35]],
+                "VSQX01LM 01.20" => [[0x3D, 0x36, 0x40, 0x36]],
+                "S599CAA  00.80" => [[0x3D, 0x39, 0x3B, 0x35]],
+                // 3U0920842B V06
+                "KB5M07HH 09.00" or "VWK503LL 09.00" or "VWK503MH 09.00" => [[0x3E, 0x35, 0x3D, 0x3A]],
+                // 1J5920826L V75
+                "VMMJ08MH 09.00" => [[0x3E, 0x47, 0x3D, 0x48]],
+                "MPV300LL 00.90" or "MPV500LL 00.90" => [[0x3F, 0x38, 0x43, 0x38]],
+                "SS5500LM 01.00" => [[0x40, 0x39, 0x39, 0x38]],
+                // 6Q0920900 V18
+                "VSQX01LM 01.10" => [[0x43, 0x43, 0x3D, 0x37]],
+                "MPV300LL 03.00" => [[0x43, 0x43, 0x43, 0x39]],
+                // 6Y1920860G V12
+                "KPQMLA` $01" => [[0x47, 0x3B, 0x31, 0x3F]],
+                // 5J0920810C V2721446
+                "K5MJ07LM 08.10" => [[0x47, 0x3F, 0x39, 0x44]],
+                _ => ClusterUnlockCodes,
+            };
         }
 
         private static string SoftwareVersionToString(List<byte> versionBytes)
@@ -762,10 +692,10 @@ namespace BitFab.KW1281Test.Cluster
                     List<byte>? blockBytes = _kwp1281.ReadEeprom((ushort)addr, readLength);
                     if (blockBytes == null)
                     {
-                        blockBytes = Enumerable.Repeat((byte)0, readLength).ToList();
+                        blockBytes = [.. Enumerable.Repeat((byte)0, readLength)];
                         succeeded = false;
                     }
-                    fs.Write(blockBytes.ToArray(), 0, blockBytes.Count);
+                    fs.Write([.. blockBytes], 0, blockBytes.Count);
                     fs.Flush();
                 }
             }
@@ -776,13 +706,7 @@ namespace BitFab.KW1281Test.Cluster
             }
         }
 
-        private readonly IKW1281Dialog _kwp1281;
-        private bool _additionalCustomCommandsUnlocked;
-
-        public VdoCluster(IKW1281Dialog kwp1281)
-        {
-            _kwp1281 = kwp1281;
-            _additionalCustomCommandsUnlocked = false;
-        }
+        private readonly IKW1281Dialog _kwp1281 = kwp1281;
+        private bool _additionalCustomCommandsUnlocked = false;
     }
 }
