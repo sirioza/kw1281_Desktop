@@ -1,4 +1,4 @@
-﻿using Microsoft.UI.Xaml;
+﻿using System.Runtime.Versioning;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -19,7 +19,10 @@ namespace kw1281Desktop.WinUI
             this.InitializeComponent();
         }
 
-        protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+        [SupportedOSPlatform("windows10.0.19041")]
+        protected override MauiApp CreateMauiApp()
+        {            
+            return MauiProgram.CreateMauiApp();                    
+        }
     }
-
 }

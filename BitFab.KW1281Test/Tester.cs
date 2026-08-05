@@ -11,8 +11,8 @@ namespace BitFab.KW1281Test
 {
     internal class Tester
     {
-        Messenger Mc = Messenger.Instance;
-        DataSender Ds = DataSender.Instance;
+        private readonly Messenger Mc = Messenger.Instance;
+        private readonly DataSender Ds = DataSender.Instance;
 
         private readonly IKwpCommon _kwpCommon;
         private readonly IKW1281Dialog _kwp1281;
@@ -240,7 +240,7 @@ namespace BitFab.KW1281Test
                             var blockBytes = _kwp1281.ReadCcmRom((byte)seg, (byte)msb, (byte)lsb, blockSize);
                             if (blockBytes == null)
                             {
-                                blockBytes = Enumerable.Repeat((byte)0, blockSize).ToList();
+                                blockBytes = [.. Enumerable.Repeat((byte)0, blockSize)];
                                 succeeded = false;
                             }
                             else if (blockBytes.Count < blockSize)
@@ -249,7 +249,7 @@ namespace BitFab.KW1281Test
                                 succeeded = false;
                             }
 
-                            fs.Write(blockBytes.ToArray(), 0, blockBytes.Count);
+                            fs.Write([.. blockBytes], 0, blockBytes.Count);
                             fs.Flush();
                         }
                     }
@@ -287,16 +287,16 @@ namespace BitFab.KW1281Test
                     var blockBytes = cluster.CustomReadNecRom((ushort)address, blockSize);
                     if (blockBytes == null)
                     {
-                        blockBytes = Enumerable.Repeat((byte)0, blockSize).ToList();
+                        blockBytes = [.. Enumerable.Repeat((byte)0, blockSize)];
                         succeeded = false;
                     }
                     else if (blockBytes.Count < blockSize)
                     {
-                        blockBytes.AddRange(Enumerable.Repeat((byte)0, blockSize - blockBytes.Count));
+                        blockBytes.AddRange([.. Enumerable.Repeat((byte)0, blockSize - blockBytes.Count)]);
                         succeeded = false;
                     }
 
-                    fs.Write(blockBytes.ToArray(), 0, blockBytes.Count);
+                    fs.Write([.. blockBytes], 0, blockBytes.Count);
                     fs.Flush();
                 }
             }
@@ -427,10 +427,10 @@ namespace BitFab.KW1281Test
                     var blockBytes = _kwp1281.ReadRam((ushort)addr, readLength);
                     if (blockBytes == null)
                     {
-                        blockBytes = Enumerable.Repeat((byte)0, readLength).ToList();
+                        blockBytes = [.. Enumerable.Repeat((byte)0, readLength)];
                         succeeded = false;
                     }
-                    fs.Write(blockBytes.ToArray(), 0, blockBytes.Count);
+                    fs.Write([.. blockBytes], 0, blockBytes.Count);
                     fs.Flush();
                 }
             }
@@ -460,10 +460,10 @@ namespace BitFab.KW1281Test
                     var blockBytes = _kwp1281.ReadRomEeprom((ushort)addr, readLength);
                     if (blockBytes == null)
                     {
-                        blockBytes = Enumerable.Repeat((byte)0, readLength).ToList();
+                        blockBytes = [.. Enumerable.Repeat((byte)0, readLength)];
                         succeeded = false;
                     }
-                    fs.Write(blockBytes.ToArray(), 0, blockBytes.Count);
+                    fs.Write([.. blockBytes], 0, blockBytes.Count);
                     fs.Flush();
                 }
             }
@@ -515,14 +515,14 @@ namespace BitFab.KW1281Test
             }
 #endif
 
-            _kwp1281.SendBlock(new List<byte>
-            {
+            _kwp1281.SendBlock(
+            [
                 (byte)BlockTitle.SecurityAccessMode1,
 
                 // The radio would send 4 random values for obfuscation, but the cluster ignores
                 // them so we'll just send 0's.
                 0x00, 0x00, 0x00, 0x00 // Challenge
-            });
+            ]);
 
             var blocks = _kwp1281.ReceiveBlocks();
             var block = blocks.FirstOrDefault(b => !b.IsAckNak);
@@ -582,7 +582,7 @@ namespace BitFab.KW1281Test
                 }
                 else if (ecuInfo.Text.Contains("VDO"))
                 {
-                    var cluster = new VdoCluster(_kwp1281);
+                    VdoCluster cluster = new(_kwp1281);
                     string[] partNumberGroups = FindAndParsePartNumber(ecuInfo.Text);
                     if (partNumberGroups.Length == 4)
                     {
@@ -661,8 +661,7 @@ namespace BitFab.KW1281Test
                 }
                 else if (ecuInfo.Text.Contains("M73"))
                 {
-                    ICluster cluster = new MarelliCluster(_kwp1281, ecuInfo.Text);
-                    string dumpFileName = cluster.DumpEeprom(null, null, string.Empty);
+                    string dumpFileName = new MarelliCluster(_kwp1281, ecuInfo.Text).DumpEeprom(null, null, string.Empty);
                     byte[] buf = File.ReadAllBytes(dumpFileName);
                     ushort? skc = MarelliCluster.GetSkc(buf);
                     if (skc.HasValue)
@@ -676,9 +675,7 @@ namespace BitFab.KW1281Test
                 }
                 else if (ecuInfo.Text.Contains("BOO"))
                 {
-                    ICluster cluster = new MotometerBOOCluster(_kwp1281!);
-
-                    cluster.UnlockForEepromReadWrite();
+                    new MotometerBOOCluster(_kwp1281!).UnlockForEepromReadWrite();
 
                     var dumpFileName = DumpBOOClusterEeprom(0, 0x10, string.Empty);
 
@@ -731,7 +728,7 @@ namespace BitFab.KW1281Test
                         }
                     }
 
-                    var skc = Utils.GetShortBE(blockBytes.ToArray(), 1);
+                    var skc = Utils.GetShortBE([.. blockBytes], 1);
                     Ds.Send(skc);
                 }
                 else if (ecuInfo.Text.Contains("AGD"))
@@ -774,17 +771,17 @@ namespace BitFab.KW1281Test
 
             if (match.Success)
             {
-                return (match.Groups as IReadOnlyList<Group>).Skip(1).Select(g => g.Value).ToArray();
+                return [.. (match.Groups as IReadOnlyList<Group>).Skip(1).Select(g => g.Value)];
             }
             else
             {
-                return Array.Empty<string>();
+                return [];
             }
         }
 
         public void GroupRead(byte groupNumber)
         {
-            var succeeded = _kwp1281.GroupRead(groupNumber);
+            _kwp1281.GroupRead(groupNumber);
         }
 
         public void LoadEeprom(uint address, string filename)
@@ -959,7 +956,7 @@ namespace BitFab.KW1281Test
         {
             UnlockControllerForEepromReadWrite();
 
-            if(_kwp1281.WriteEeprom((ushort)address, new List<byte> { value }))
+            if(_kwp1281.WriteEeprom((ushort)address, [value]))
             {
                 Ds.Send("The value at address has been written.");
             }
@@ -1017,14 +1014,12 @@ namespace BitFab.KW1281Test
             for (int addr = 0; addr <= 65535; addr += blockSize)
             {
                 var blockBytes = _kwp1281.ReadEeprom((ushort)addr, blockSize);
-                blockBytes = Enumerable.Repeat(
-                    blockBytes == null ? (byte)0 : (byte)0xFF,
-                    blockSize).ToList();
+                blockBytes = [.. Enumerable.Repeat(blockBytes == null ? (byte)0 : (byte)0xFF, blockSize)];
                 bytes.AddRange(blockBytes);
             }
             var dumpFileName = Path.Combine(filename, "ccm_eeprom_map.bin");
             Mc.AddLine($"Saving EEPROM map to {dumpFileName}");
-            File.WriteAllBytes(dumpFileName, bytes.ToArray());
+            File.WriteAllBytes(dumpFileName, [.. bytes]);
 
             Ds.Send($"Saved Ccm Eeprom map to {dumpFileName}");
         }
@@ -1037,7 +1032,7 @@ namespace BitFab.KW1281Test
 
             var mapFileName = Path.Combine(filename, "eeprom_map.bin");
             Mc.AddLine($"Saving EEPROM map to {mapFileName}");
-            File.WriteAllBytes(mapFileName, map.ToArray());
+            File.WriteAllBytes(mapFileName, [.. map]);
 
             Ds.Send($"Saved EEPROM map to {mapFileName}");
         }
@@ -1110,10 +1105,10 @@ namespace BitFab.KW1281Test
                     var blockBytes = _kwp1281.ReadEeprom((ushort)addr, readLength);
                     if (blockBytes == null)
                     {
-                        blockBytes = Enumerable.Repeat((byte)0, readLength).ToList();
+                        blockBytes = [.. Enumerable.Repeat((byte)0, readLength)];
                         succeeded = false;
                     }
-                    fs.Write(blockBytes.ToArray(), 0, blockBytes.Count);
+                    fs.Write([.. blockBytes], 0, blockBytes.Count);
                     fs.Flush();
                 }
             }
@@ -1132,9 +1127,7 @@ namespace BitFab.KW1281Test
             for (uint addr = startAddr; addr < (startAddr + length); addr += maxWriteLength)
             {
                 var writeLength = (byte)Math.Min(startAddr + length - addr, maxWriteLength);
-                if (!_kwp1281.WriteEeprom(
-                    (ushort)addr,
-                    bytes.Skip((int)(addr - startAddr)).Take(writeLength).ToList()))
+                if (!_kwp1281.WriteEeprom((ushort)addr, [.. bytes.Skip((int)(addr - startAddr)).Take(writeLength)]))
                 {
                     succeeded = false;
                 }

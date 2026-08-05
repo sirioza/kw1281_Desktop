@@ -11,7 +11,7 @@ namespace BitFab.KW1281Test.Blocks
             while (bodyBytes.Count > 2)
             {
                 var subBlockHeader = bodyBytes.Take(3).ToArray();
-                bodyBytes = bodyBytes.Skip(3).ToList();
+                bodyBytes = [.. bodyBytes.Skip(3)];
 
                 int subBlockBodyLength = subBlockHeader[2];
                 if (bodyBytes.Count < subBlockBodyLength)
@@ -24,16 +24,16 @@ namespace BitFab.KW1281Test.Blocks
                 {
                     BlockType = subBlockHeader[0],
                     Data = subBlockHeader[1],
-                    Body = bodyBytes.Take(subBlockBodyLength).ToArray()
+                    Body = [.. bodyBytes.Take(subBlockBodyLength)]
                 };
-                bodyBytes = bodyBytes.Skip(subBlockBodyLength).ToList();
+                bodyBytes = [.. bodyBytes.Skip(subBlockBodyLength)];
 
                 SubBlocks.Add(subBlock);
 
                 if (subBlock.BlockType == 0x8D)
                 {
                     var text = Encoding.ASCII.GetString(subBlock.Body, 0, subBlock.Body.Length);
-                    _text = text.Split((char)0x03).ToList();
+                    _text = [.. text.Split((char)0x03)];
                 }
             }
 
@@ -44,7 +44,7 @@ namespace BitFab.KW1281Test.Blocks
             }
         }
 
-        private readonly List<string> _text = new();
+        private readonly List<string> _text = [];
 
         public string GetText(int i)
         {
@@ -68,7 +68,7 @@ namespace BitFab.KW1281Test.Blocks
             return sb.ToString();
         }
 
-        readonly List<SubBlock> SubBlocks = new();
+        readonly List<SubBlock> SubBlocks = [];
 
         class SubBlock
         {
@@ -76,18 +76,15 @@ namespace BitFab.KW1281Test.Blocks
 
             public byte Data { get; init; }
 
-            public byte[] Body { get; init; } = Array.Empty<byte>();
+            public byte[] Body { get; init; } = [];
 
             public override string ToString()
             {
-                switch(BlockType)
+                return BlockType switch
                 {
-                    case 0x8D:
-                        return $"(${BlockType:X2} ${Data:X2} {Encoding.ASCII.GetString(Body, 0, Body.Length).Replace((char)0x03, '|')})";
-
-                    default:
-                        return $"(${BlockType:X2} ${Data:X2}{Utils.Dump(Body)})";
-                }
+                    0x8D => $"(${BlockType:X2} ${Data:X2} {Encoding.ASCII.GetString(Body, 0, Body.Length).Replace((char)0x03, '|')})",
+                    _ => $"(${BlockType:X2} ${Data:X2}{Utils.Dump(Body)})",
+                };
             }
         }
     }

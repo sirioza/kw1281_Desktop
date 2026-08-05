@@ -5,9 +5,9 @@ using BitFab.KW1281Test.Blocks;
 
 namespace BitFab.KW1281Test.Cluster;
 
-internal class AudiC5Cluster : ICluster
+internal class AudiC5Cluster(IKW1281Dialog kw1281Dialog) : ICluster
 {
-    Messenger Mc = Messenger.Instance;
+    private readonly Messenger Mc = Messenger.Instance;
 
     public void UnlockForEepromReadWrite()
     {
@@ -54,8 +54,15 @@ internal class AudiC5Cluster : ICluster
 
     public string DumpEeprom(uint? address, uint? length, string path)
     {
-        ArgumentNullException.ThrowIfNull(address);
-        ArgumentNullException.ThrowIfNull(length);
+        if (!address.HasValue)
+        {
+            throw new ArgumentNullException(nameof(address));
+        }
+
+        if (!length.HasValue)
+        {
+            throw new ArgumentNullException(nameof(length));
+        }
 
         WriteBlock([Constants.Hello]);
 
@@ -131,7 +138,7 @@ internal class AudiC5Cluster : ICluster
                 blockBytes.AddRange(Enumerable.Repeat((byte)0, readLength - blockBytes.Count));
             }
 
-            fs.Write(blockBytes.ToArray(), offset: 0, blockBytes.Count);
+            fs.Write([.. blockBytes], offset: 0, blockBytes.Count);
             fs.Flush();
         }
 
@@ -168,15 +175,15 @@ internal class AudiC5Cluster : ICluster
         $"Warning: Expected block length ${expectedLength:X2} but length is ${actualLength:X2}");
         }
 
-        return blockBytes.Skip(3).Take(actualLength - 4).ToList();
+        return [.. blockBytes.Skip(3).Take(actualLength - 4)];
     }
 
-    private static byte BlockTitle(IReadOnlyList<byte> blockBytes)
+    private static byte BlockTitle(List<byte> blockBytes)
     {
         return blockBytes[2];
     }
 
-    private void WriteBlock(IReadOnlyCollection<byte> bodyBytes)
+    private void WriteBlock(List<byte> bodyBytes)
     {
         byte checksum = 0x00;
 
@@ -250,10 +257,5 @@ internal class AudiC5Cluster : ICluster
         public const byte ReadEeprom = 0x72;
     }
 
-    private readonly IKW1281Dialog _kw1281Dialog;
-
-    public AudiC5Cluster(IKW1281Dialog kw1281Dialog)
-    {
-        _kw1281Dialog = kw1281Dialog;
-    }
+    private readonly IKW1281Dialog _kw1281Dialog = kw1281Dialog;
 }

@@ -1,16 +1,16 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace kw1281Desktop.Models;
-public class ObservableAddressValuePair : ObservableObject
+public partial class ObservableAddressValuePair : ObservableObject
 {
-    private string _address;
+    private string _address = string.Empty;
     public string Address
     {
         get => _address;
         set => SetProperty(ref _address, value);
     }
 
-    private string _value;
+    private string _value = string.Empty;
     public string Value
     {
         get => _value;

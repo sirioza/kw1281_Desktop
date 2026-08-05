@@ -6,15 +6,14 @@ namespace BitFab.KW1281Test.Blocks
     {
         public GroupReadResponseBlock(List<byte> bytes) : base(bytes)
         {
-            SensorValues = new List<SensorValue>();
+            SensorValues = [];
 
             var bodyBytes = new List<byte>(Body);
             while (bodyBytes.Count > 2)
             {
                 var valueBytes = bodyBytes.Take(3).ToArray();
-                SensorValues.Add(
-                    new SensorValue(valueBytes[0], valueBytes[1], valueBytes[2]));
-                bodyBytes = bodyBytes.Skip(3).ToList();
+                SensorValues.Add(new SensorValue(valueBytes[0], valueBytes[1], valueBytes[2]));
+                bodyBytes = [.. bodyBytes.Skip(3)];
             }
 
             if (bodyBytes.Count > 0)

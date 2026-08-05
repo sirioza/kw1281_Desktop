@@ -83,7 +83,7 @@ namespace BitFab.KW1281Test
         Block ReceiveBlock();
     }
 
-    internal class KW1281Dialog : IKW1281Dialog
+    internal class KW1281Dialog(IKwpCommon kwpCommon) : IKW1281Dialog
     {
         readonly Messenger Mc = Messenger.Instance;
         readonly DataSender Ds = DataSender.Instance;
@@ -157,12 +157,12 @@ namespace BitFab.KW1281Test
                 return null;
             }
 
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 throw new InvalidOperationException($"ReadEeprom returned {blocks.Count} blocks instead of 1");
             }
-            return blocks[0].Body.ToList();
+            return [.. blocks[0].Body];
         }
 
         /// <summary>
@@ -189,12 +189,12 @@ namespace BitFab.KW1281Test
                 return null;
             }
 
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 throw new InvalidOperationException($"ReadEeprom returned {blocks.Count} blocks instead of 1");
             }
-            return blocks[0].Body.ToList();
+            return [.. blocks[0].Body];
         }
 
         /// <summary>
@@ -234,12 +234,12 @@ namespace BitFab.KW1281Test
                 return null;
             }
 
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 throw new InvalidOperationException($"ReadEeprom returned {blocks.Count} blocks instead of 1");
             }
-            return blocks[0].Body.ToList();
+            return [.. blocks[0].Body];
         }
 
         public bool WriteEeprom(ushort address, List<byte> values)
@@ -256,7 +256,7 @@ namespace BitFab.KW1281Test
             };
             sendBody.AddRange(values);
 
-            SendBlock(sendBody.ToList());
+            SendBlock([.. sendBody]);
             var blocks = ReceiveBlocks();
 
             if (blocks.Count == 1 && blocks[0] is NakBlock)
@@ -266,7 +266,7 @@ namespace BitFab.KW1281Test
                 return false;
             }
 
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 Mc.AddLine($"WriteEeprom returned {blocks.Count} blocks instead of 1");
@@ -306,12 +306,12 @@ namespace BitFab.KW1281Test
                 return [];
             }
 
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 throw new InvalidOperationException($"ReadRomEeprom returned {blocks.Count} blocks instead of 1");
             }
-            return blocks[0].Body.ToList();
+            return [.. blocks[0].Body];
         }
 
         public void EndCommunication()
@@ -533,7 +533,7 @@ namespace BitFab.KW1281Test
             SendBlock([ (byte)BlockTitle.ActuatorTest, value ]);
 
             var blocks = ReceiveBlocks();
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 Mc.AddLine($"ActuatorTest returned {blocks.Count} blocks instead of 1");
@@ -556,7 +556,7 @@ namespace BitFab.KW1281Test
             SendBlock([ (byte)BlockTitle.FaultCodesRead ]);
 
             var blocks = ReceiveBlocks();
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
 
             var faultCodes = new List<FaultCode>();
             foreach (var block in blocks)
@@ -580,7 +580,7 @@ namespace BitFab.KW1281Test
             SendBlock([ (byte)BlockTitle.FaultCodesDelete ]);
 
             var blocks = ReceiveBlocks();
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
 
             var faultCodes = new List<FaultCode>();
             foreach (var block in blocks)
@@ -730,9 +730,8 @@ namespace BitFab.KW1281Test
             }
             else if (responseBlock is GroupReadResponseBlock groupReading)
             {
-                result = groupReading.SensorValues
-                    .Select(group => new KeyValuePair<byte, string>(group.SensorID, group.ToString()))
-                    .ToList();
+                result = [.. groupReading.SensorValues
+                    .Select(group => new KeyValuePair<byte, string>(group.SensorID, group.ToString()))];
 
                 Ds.Send(result);
             }
@@ -785,9 +784,8 @@ namespace BitFab.KW1281Test
                 return false;
             }
 
-            List<KeyValuePair<byte, string>> result = rawDataReadResponse.Body
-                .Select(b => new KeyValuePair<byte, string>(0, $"{b:D3}"))
-                .ToList();
+            List<KeyValuePair<byte, string>> result =
+                [.. rawDataReadResponse.Body.Select(b => new KeyValuePair<byte, string>(0, $"{b:D3}"))];
 
             Ds.Send(result);
 
@@ -808,12 +806,12 @@ namespace BitFab.KW1281Test
                 return [];
             }
 
-            blocks = blocks.Where(b => !b.IsAckNak).ToList();
+            blocks = [.. blocks.Where(b => !b.IsAckNak)];
             if (blocks.Count != 1)
             {
                 throw new InvalidOperationException($"ReadRomEeprom returned {blocks.Count} blocks instead of 1");
             }
-            return blocks[0].Body.ToList();
+            return [.. blocks[0].Body];
         }
 
         private static class TimeInterval
@@ -825,34 +823,22 @@ namespace BitFab.KW1281Test
             public const int R6 = 2;
         }
 
-        public IKwpCommon KwpCommon { get; }
+        public IKwpCommon KwpCommon { get; } = kwpCommon;
 
-        private bool _isConnected;
+        private bool _isConnected = false;
 
-        private byte? _blockCounter;
-
-        public KW1281Dialog(IKwpCommon kwpCommon)
-        {
-            KwpCommon = kwpCommon;
-            _isConnected = false;
-            _blockCounter = null;
-        }
+        private byte? _blockCounter = null;
     }
 
     /// <summary>
     /// Used for commands such as ActuatorTest which need to be kept alive with ACKs while waiting
     /// for user input.
     /// </summary>
-    internal class KW1281KeepAlive : IDisposable
+    internal class KW1281KeepAlive(IKW1281Dialog kw1281Dialog) : IDisposable
     {
-        private readonly IKW1281Dialog _kw1281Dialog;
+        private readonly IKW1281Dialog _kw1281Dialog = kw1281Dialog;
         private volatile bool _cancel = false;
         private Task? _keepAliveTask = null;
-
-        public KW1281KeepAlive(IKW1281Dialog kw1281Dialog)
-        {
-            _kw1281Dialog = kw1281Dialog;
-        }
 
         public ActuatorTestResponseBlock? ActuatorTest(byte value)
         {

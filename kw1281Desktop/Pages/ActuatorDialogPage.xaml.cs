@@ -19,8 +19,8 @@ public partial class ActuatorDialogPage : CommunityToolkit.Maui.Views.Popup
         CancelClicked?.Invoke();
     }
 
-    private string _input;
-    public string Input
+    private string? _input;
+    public string? Input
     {
         get => _input;
         set

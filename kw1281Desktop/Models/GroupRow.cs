@@ -4,7 +4,7 @@ using System.Windows.Input;
 
 namespace kw1281Desktop.Models;
 
-public class GroupRow : BasePropertyChanged
+public partial class GroupRow : BasePropertyChanged
 {
     public GroupRow()
     {

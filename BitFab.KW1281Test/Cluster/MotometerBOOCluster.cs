@@ -3,9 +3,9 @@ using BitFab.KW1281Test.Blocks;
 
 namespace BitFab.KW1281Test.Cluster
 {
-    internal class MotometerBOOCluster : ICluster
+    internal class MotometerBOOCluster(IKW1281Dialog kwp1281) : ICluster
     {
-        Messenger Mc = Messenger.Instance;
+        private readonly Messenger Mc = Messenger.Instance;
 
         public void UnlockForEepromReadWrite()
         {
@@ -47,7 +47,7 @@ namespace BitFab.KW1281Test.Cluster
 
         private bool SendCustom(int first, int second)
         {
-            _kwp1281.SendBlock(new List<byte> { 0x1B, (byte)first, (byte)second });
+            _kwp1281.SendBlock([0x1B, (byte)first, (byte)second]);
             var block = _kwp1281.ReceiveBlocks().FirstOrDefault();
 
             if (block is NakBlock)
@@ -130,7 +130,7 @@ namespace BitFab.KW1281Test.Cluster
             Mc.AddLine("Sending 0x43 block");
 
             _kwp1281.SendBlock([0x43]);
-            var blocks = _kwp1281.ReceiveBlocks().Where(b => !b.IsAckNak).ToList();
+            List<Block> blocks = [.. _kwp1281.ReceiveBlocks().Where(b => !b.IsAckNak)];
             foreach (var block in blocks)
             {
                 Mc.AddLine($"{Utils.DumpAscii(block.Body)}");
@@ -139,11 +139,6 @@ namespace BitFab.KW1281Test.Cluster
             return Utils.DumpAscii(blocks[0].Body);
         }
 
-        private readonly IKW1281Dialog _kwp1281;
-
-        public MotometerBOOCluster(IKW1281Dialog kwp1281)
-        {
-            _kwp1281 = kwp1281;
-        }
+        private readonly IKW1281Dialog _kwp1281 = kwp1281;
     }
 }

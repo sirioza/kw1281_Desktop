@@ -230,7 +230,7 @@ public class Diagnostic
                 case Commands.FindLogins:
                     tester.FindLogins(login!.Value, ecuInfo.WorkshopCode);
                     break;
-                //case "getclusterid":
+                //case Commands.GetclusterId":
                 //    tester.GetClusterId();
                 //    break;
                 case Commands.GroupRead:
